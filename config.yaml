@@ -1,0 +1,14 @@
+#config for RNA pol II ChIP-seq class analysis
+
+CHROMS: '/vol3/home/ancarr/data-sets/genome/hg19.genome'
+
+GENES: '/vol3/home/ancarr/data-sets/genome/knownGene.hg19.bed.gz'
+
+FASTA: '/vol3/home/ancarr/data-sets/genome/hg19.fa.gz'
+
+SAMPLES:
+  - Molm13Control_S1_L001_R1_001
+  - Molm13Drug_S2_L001_R1_001
+
+
+
