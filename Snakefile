@@ -4,11 +4,13 @@ from datetime import date
 today = date.today().isoformat()
 workdir: 'results-polII-chip-seq'
 
+#config file supplies sample information and should supply defined
+#variables as well but those arenot able to be found by snakemake
+#unless defined in Snakefile as shown below
+
 configfile: "/vol3/home/ancarr/projects/pol2_chipseq/config.yaml"
 
-#FASTA = config['FASTA']
-#CHROMS = config['CHROMS']
-#GENES = config['GENES']
+
 SAMPLES = config['SAMPLES']
 
 FASTA = '/vol3/home/ancarr/data-sets/genome/hg19.fa.gz'
@@ -17,13 +19,19 @@ CHROMS = '/vol3/home/ancarr/data-sets/genome/hg19.genome'
 BOWTIEINDEX = '/vol3/home/jhessel/ref/genomes/hg19/hg19'
 WINDOWS = '/vol3/home/ancarr/data-sets/genome/tss_windows.bed'
 
+#final sample type is bed file with signal coverage maps to 2 Kb regions
+#around the TSS
 
 rule all:
   input: expand("bedfiles/{samples}/coverage.bed", samples=SAMPLES)
 
+
+#maps signal from the bedgraph files to 2kb "windows" around the TSS
+#use a bedfile I made with the window regions defined for each gene
+
 rule get_coverage:
   input: 
-    windows = WINDOWS
+    windows = WINDOWS,
     bedgraph = "bedgraphs/{samples}.bedgraph"
   output:
     coverage = "bedfiles/{samples}/coverage.bed"
@@ -38,22 +46,9 @@ rule get_coverage:
       -b {input.bedgraph} \
       -c 4 -o mean -null 0 > {output.coverage}
     """
-
-rule prepare_windows:
-  input:
-    tss = TSS,
-    genes = GENES,
-    chroms = CHROMS
-  output:
-    "bedfiles/tss_windows.bed"
-  params:
-    job_name = 'windows',
-    memory =  "select[mem>4] rusage[mem=4]"
-  log:
-    'logs/windows.log'
-  shell:
-    "{input.tss} {input.genes} {input.chroms} {output}"
  
+#generates bedgraph files from bam files to map signal to the genome
+
 rule make_bedgraphs:
   input:
     "bowtie/{samples}.bam"
@@ -72,27 +67,11 @@ rule make_bedgraphs:
       -g {CHROMS} > {output}
     """
 
-   # FASTA 
-  #output:
-   # "indexes/bowtie_idx/hg19.1.bt2"
-  #params:
-   # job_name = 'indexes',
-    #output_name = "indexes/bowtie_idx/hg19",
-    #memory =  "select[mem>30] rusage[mem=30] "
-  #threads:
-   # 8
-  #log:
-   # "logs/bowtie2_idx.log"
-  #shell:
-   # """
-   # gunzip {input} -c > {input}.tmp
-    #bowtie2-build {input}.tmp {params.output_name}
-   # """
+#aligns sample fastq files using bowtie2
 
 rule bowtie_mapping:
   input:
-    fq = "/vol3/home/ancarr/data/chip-seq/160115_pol2_chip/{samples}.fastq.gz",
-#    idx = "/vol3/home/jhessel/ref/genomes/hg19/hg19"
+    fq = "/vol3/home/ancarr/data/chip-seq/160115_pol2_chip/{samples}.fastq.gz"
   output:
     "bowtie/{samples}.bam"
   params:
@@ -106,6 +85,7 @@ rule bowtie_mapping:
   shell:
     """
     bowtie2 \
+      -t {threads} \
       -x {params.idx} \
       -U {input.fq} \
       -S {output}.tmp
